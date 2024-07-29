@@ -15,7 +15,6 @@ type Config struct {
   AccessUserName *string `json:"accessUserName,omitempty" xml:"accessUserName,omitempty"`
   AccessPassWord *string `json:"accessPassWord,omitempty" xml:"accessPassWord,omitempty"`
   UserAgent *string `json:"userAgent,omitempty" xml:"userAgent,omitempty"`
-  HttpProxy *string `json:"httpProxy,omitempty" xml:"httpProxy,omitempty"`
   RuntimeOptions *util.RuntimeOptions `json:"runtimeOptions,omitempty" xml:"runtimeOptions,omitempty"`
 }
 
@@ -54,11 +53,6 @@ func (s *Config) SetAccessPassWord(v string) *Config {
 
 func (s *Config) SetUserAgent(v string) *Config {
   s.UserAgent = &v
-  return s
-}
-
-func (s *Config) SetHttpProxy(v string) *Config {
-  s.HttpProxy = &v
   return s
 }
 
@@ -445,7 +439,6 @@ type Client struct {
   UserAgent  *string
   Credential  *string
   Domainsuffix  *string
-  HttpProxy  *string
   RuntimeOptions  *util.RuntimeOptions
 }
 
@@ -468,12 +461,11 @@ func (client *Client)Init(config *Config)(_err error) {
     client.Credential = client.GetRealmSignStr(config.AccessUserName, config.AccessPassWord)
   }
 
-  client.Endpoint = config.Endpoint
+  client.Endpoint = client.GetEndpoint(config.Endpoint)
   client.InstanceId = config.InstanceId
   client.Protocol = config.Protocol
   client.UserAgent = config.UserAgent
   client.Domainsuffix = tea.String("ha.aliyuncs.com")
-  client.HttpProxy = config.HttpProxy
   client.RuntimeOptions = client.BuildRuntimeOptions(config.RuntimeOptions)
   return nil
 }
@@ -488,7 +480,6 @@ func (client *Client) _request(method *string, pathname *string, query map[strin
     "timeouted": "retry",
     "readTimeout": tea.IntValue(runtime.ReadTimeout),
     "connectTimeout": tea.IntValue(runtime.ConnectTimeout),
-    "httpProxy": tea.StringValue(runtime.HttpProxy),
     "httpsProxy": tea.StringValue(runtime.HttpsProxy),
     "noProxy": tea.StringValue(runtime.NoProxy),
     "maxIdleConns": tea.IntValue(runtime.MaxIdleConns),
@@ -603,6 +594,26 @@ func (client *Client) _request(method *string, pathname *string, query map[strin
   return _resp, _err
 }
 
+
+// Description:
+//
+// 如果endpoint 配置以 http:// 或 https:// 开头，则去掉头部的 http:// 或 https://, 否则直接返回
+func (client *Client) GetEndpoint (endpoint *string) (_result *string) {
+  if tea.BoolValue(string_.HasPrefix(endpoint, tea.String("http://"))) {
+    _body := string_.Replace(endpoint, tea.String("http://"), tea.String(""), tea.Int(1))
+    _result = _body
+    return _result
+  }
+
+  if tea.BoolValue(string_.HasPrefix(endpoint, tea.String("https://"))) {
+    _body := string_.Replace(endpoint, tea.String("https://"), tea.String(""), tea.Int(1))
+    _result = _body
+    return _result
+  }
+
+  _result = endpoint
+  return _result
+}
 
 // Description:
 //
